@@ -17,7 +17,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 
-const API_KEY = "7294eff81925415cb397fb4817e21643";
+const API_KEY = "1dce8597e3d9478ba14e118a7896dcd8";
 const BASE_URL = "https://newsapi.org/v2/everything";
 
 interface NewsItem {
