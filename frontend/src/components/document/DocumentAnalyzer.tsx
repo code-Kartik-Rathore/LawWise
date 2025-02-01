@@ -17,6 +17,12 @@ import { motion } from 'framer-motion';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DescriptionIcon from '@mui/icons-material/Description';
 import { useAuth } from '../../context/AuthContext';
+import Tesseract from 'tesseract.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as pdfjs from 'pdfjs-dist';
+
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI("AIzaSyB99T6jpCq62Jp2CrvoU8m_GFujDqNOdpc");
 
 interface AnalysisResult {
   summary: string;
@@ -32,6 +38,25 @@ const DocumentAnalyzer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument(arrayBuffer).promise;
+    let text = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(' ') + '\n';
+    }
+    
+    return text;
+  };
+
+  const extractTextFromImage = async (file: File): Promise<string> => {
+    const result = await Tesseract.recognize(file, 'eng');
+    return result.data.text;
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -63,27 +88,20 @@ const DocumentAnalyzer = () => {
     setError(null);
 
     try {
-      // Convert file to text content
-      const fileContent = await getFileContent(file);
+      // Extract text based on file type
+      let extractedText = '';
       
-      // Call Gemini API
-      const API_KEY = 'AIzaSyB99T6jpCq62Jp2CrvoU8m_GFujDqNOdpc';
-      
-      // Optimize the content length if it's too long
-      let optimizedContent = fileContent;
-      if (fileContent.length > 10000) {
-        optimizedContent = fileContent.substring(0, 10000) + '... (content truncated for length)';
+      if (file.type === 'application/pdf') {
+        extractedText = await extractTextFromPDF(file);
+      } else if (file.type.startsWith('image/')) {
+        extractedText = await extractTextFromImage(file);
+      } else {
+        throw new Error('Unsupported file type');
       }
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Analyze this document and provide a structured analysis with all sections marked clearly:
+      // Call Gemini API
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const prompt = `Analyze this document and provide a structured analysis with all sections marked clearly:
 
 SUMMARY:
 Brief overview of the document (2-3 sentences)
@@ -111,41 +129,11 @@ RECOMMENDATIONS:
 2.
 3.
 
+Content: ${extractedText}`;
 
-Content: ${optimizedContent}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 800, // Increased to accommodate longer summary
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
-        
-        // Handle specific error cases
-        if (errorData.error?.message?.includes('quota')) {
-          throw new Error('API quota exceeded. Please try again later or contact support for a higher quota limit.');
-        } else if (errorData.error?.message?.includes('rate limit')) {
-          throw new Error('Too many requests. Please wait a moment and try again.');
-        } else {
-          throw new Error(errorData.error?.message || 'Failed to analyze document');
-        }
-      }
-
-      const data = await response.json();
-      
-      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error('Invalid response format from API');
-      }
-
-      // Parse Gemini's response
-      const text = data.candidates[0].content.parts[0].text;
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
       
       // Extract sections using more precise regex patterns with clear boundaries
       const extractSection = (text: string, sectionName: string, nextSection: string): string[] => {
@@ -199,15 +187,10 @@ Content: ${optimizedContent}`
         legalImplications: sections.legalImplications,
         recommendations: sections.recommendations
       });
-    } catch (err) {
-      console.error('Analysis error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to analyze document. Please try again.';
-      setError(errorMessage);
-      
-      // Show a more helpful message in the UI
-      if (errorMessage.includes('quota')) {
-        setError('The document analysis service is currently unavailable due to high demand. Please try again in a few minutes or contact support if the issue persists.');
-      }
+
+    } catch (error) {
+      console.error('Analysis error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to analyze document');
     } finally {
       setLoading(false);
     }
