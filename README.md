@@ -56,5 +56,5 @@ Coming soon...
 - Framer Motion
 - React Router
 
-### Backend (Planned)
-- To be implemented
+### Backend 
+- Login and Signup authorization
