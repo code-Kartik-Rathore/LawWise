@@ -10,7 +10,7 @@ lawWise/
 │   ├── public/       # Static files
 │   ├── src/          # Source code
 │   └── ...
-└── backend/          # Backend application (to be implemented)
+└── backend/          # Backend application 
 ```
 
 ## Getting Started
