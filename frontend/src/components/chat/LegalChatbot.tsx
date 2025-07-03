@@ -31,7 +31,7 @@ const LegalChatbot: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
-  const API_KEY = 'AIzaSyB99T6jpCq62Jp2CrvoU8m_GFujDqNOdpc';
+  const API_KEY = 'AIzaSyDhyuXj2KLCclCsN_-yDr0NuOOLIRQQnls';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,7 +56,7 @@ const LegalChatbot: React.FC = () => {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
         {
           method: 'POST',
           headers: {
@@ -96,14 +96,27 @@ Please provide a clear and concise response without any special formatting chara
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Chat error:', error);
+    } catch (error: any) {
+      let errorText = 'I apologize, but I encountered an error. Please try again.';
+      if (error instanceof Error) {
+        errorText += `\nDetails: ${error.message}`;
+      }
+      // Try to parse API error details if available
+      if (error && error.response) {
+        try {
+          const errData = await error.response.json();
+          if (errData && errData.error && errData.error.message) {
+            errorText += `\nAPI Error: ${errData.error.message}`;
+          }
+        } catch {}
+      }
       const errorMessage: Message = {
-        text: 'I apologize, but I encountered an error. Please try again.',
+        text: errorText,
         sender: 'bot',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      console.error('Chat error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +131,11 @@ Please provide a clear and concise response without any special formatting chara
 
   return (
     <>
+      {/* 
+      <Box mt={2}>
+        <Blogs />
+      </Box>
+      */}
       <Fab
         color="primary"
         aria-label="chat"
