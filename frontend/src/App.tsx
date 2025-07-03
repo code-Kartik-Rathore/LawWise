@@ -152,7 +152,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/news" element={<NewsSection />} />
-                <Route path="/blogs" element={<BlogList />} />
+{/*                 <Route path="/blogs" element={<BlogList />} /> */}
                 <Route path="/document-analysis" element={<DocumentAnalyzer />} />
                 <Route path="/community" element={<Community />} />
                 <Route path="/login" element={<Login />} />
