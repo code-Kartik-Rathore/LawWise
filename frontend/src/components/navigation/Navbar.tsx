@@ -69,7 +69,7 @@ const Navbar = () => {
             >
               News
             </Button>
-            <Button
+{/*             <Button
               component={RouterLink}
               to="/blogs"
               startIcon={<BookIcon />}
@@ -81,7 +81,7 @@ const Navbar = () => {
               }}
             >
               Blogs
-            </Button>
+            </Button> */}
             <Button
               component={RouterLink}
               to="/document-analysis"
